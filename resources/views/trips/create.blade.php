@@ -11,8 +11,13 @@
             <h1 class="text-4xl font-serif font-bold text-journal-dark mb-2">Plan a New Journey</h1>
             <p class="text-journal-light">Fill out the details below and our smart engine will generate a complete itinerary.</p>
         </div>
-        
-        <form action="{{ route('trips.store') }}" method="POST" class="space-y-8">
+        @php
+            $destCurrencies = $destinations->mapWithKeys(function($dest) {
+                return [$dest->id => $dest->currency];
+            });
+        @endphp
+        <form action="{{ route('trips.store') }}" method="POST" class="space-y-8" 
+              x-data="tripPlanner({{ $destCurrencies->toJson() }}, '{{ $destination ? $destination->id : '' }}')">
             @csrf
             
             <!-- Destination & Title -->
@@ -22,7 +27,7 @@
                 <div class="grid grid-cols-1 gap-6">
                     <div>
                         <label for="destination_id" class="block text-sm font-bold text-journal-dark uppercase tracking-wider mb-2">Destination *</label>
-                        <select name="destination_id" id="destination_id" required class="w-full border-journal-border rounded-sm focus:ring-journal-accent focus:border-journal-accent bg-journal-bg">
+                        <select x-model="selectedDest" name="destination_id" id="destination_id" required class="w-full border-journal-border rounded-sm focus:ring-journal-accent focus:border-journal-accent bg-journal-bg">
                             <option value="">Select a destination...</option>
                             @foreach($destinations as $dest)
                                 <option value="{{ $dest->id }}" {{ ($destination && $destination->id == $dest->id) ? 'selected' : '' }}>
@@ -68,8 +73,32 @@
                     <div>
                         <label for="budget" class="block text-sm font-bold text-journal-dark uppercase tracking-wider mb-2">Total Budget Estimate (Optional)</label>
                         <div class="flex items-center border border-journal-border rounded-sm bg-journal-bg focus-within:ring-1 focus-within:ring-journal-accent focus-within:border-journal-accent overflow-hidden">
-                            <span class="pl-3 text-journal-light">$</span>
-                            <input type="number" name="budget" id="budget" value="{{ old('budget') }}" min="0" step="50" class="w-full border-none focus:ring-0 bg-transparent">
+                            <span class="pl-3 text-journal-dark font-bold" x-text="getCurrencySymbol()">$</span>
+                            <input type="number" x-model="budget" name="budget" id="budget" min="0" step="50" class="w-full border-none focus:ring-0 bg-transparent" placeholder="Amount">
+                            <span class="pr-3 text-journal-light text-xs font-bold" x-text="currentCurrencyCode()">USD</span>
+                        </div>
+                        
+                        <!-- Currency Converter -->
+                        <div class="mt-2 text-xs" x-show="currentCurrencyCode() !== userCurrency" x-cloak>
+                            <button type="button" @click="showConverter = !showConverter" class="text-journal-olive hover:text-journal-dark font-bold underline">
+                                <i class="fa-solid fa-calculator mr-1"></i>Convert to my currency
+                            </button>
+                            
+                            <div x-show="showConverter" x-transition class="mt-2 p-3 bg-journal-paper border border-journal-border rounded-sm">
+                                <p class="font-bold mb-2 text-journal-dark">Estimated Conversion</p>
+                                <div class="flex items-center gap-2 mb-2">
+                                    <select x-model="userCurrency" class="text-xs border-journal-border rounded-sm py-1 pl-2 pr-6">
+                                        <option value="USD">USD ($)</option>
+                                        <option value="EUR">EUR (€)</option>
+                                        <option value="GBP">GBP (£)</option>
+                                        <option value="INR">INR (₹)</option>
+                                        <option value="AUD">AUD (A$)</option>
+                                    </select>
+                                    <span class="text-journal-light">=</span>
+                                    <span class="font-bold text-journal-dark text-sm" x-text="convertedAmount()">0.00</span>
+                                </div>
+                                <p class="text-[10px] text-journal-light italic">* Using approximate mock exchange rates.</p>
+                            </div>
                         </div>
                     </div>
                     
@@ -117,4 +146,60 @@
         </form>
     </div>
 </div>
+@push('scripts')
+<script>
+    document.addEventListener('alpine:init', () => {
+        Alpine.data('tripPlanner', (currencies, initialDest) => ({
+            selectedDest: initialDest,
+            budget: '{{ old('budget') }}',
+            showConverter: false,
+            userCurrency: 'USD',
+            currencies: currencies,
+            
+            // Mock exchange rates relative to USD (1 USD = X)
+            rates: {
+                'USD': 1,
+                'EUR': 0.92,
+                'GBP': 0.79,
+                'JPY': 150.5,
+                'CAD': 1.36,
+                'PEN': 3.75,
+                'MAD': 10.05,
+                'IDR': 15600,
+                'INR': 83.3,
+                'AUD': 1.52
+            },
+            
+            symbols: {
+                'USD': '$', 'EUR': '€', 'GBP': '£', 'JPY': '¥', 
+                'CAD': 'C$', 'PEN': 'S/', 'MAD': 'MAD', 'IDR': 'Rp', 'INR': '₹', 'AUD': 'A$'
+            },
+            
+            currentCurrencyCode() {
+                if (!this.selectedDest || !this.currencies[this.selectedDest]) return 'USD';
+                return this.currencies[this.selectedDest];
+            },
+            
+            getCurrencySymbol() {
+                const code = this.currentCurrencyCode();
+                return this.symbols[code] || code;
+            },
+            
+            convertedAmount() {
+                if (!this.budget || isNaN(this.budget)) return '0.00';
+                
+                const destCode = this.currentCurrencyCode();
+                const destRate = this.rates[destCode] || 1;
+                const userRate = this.rates[this.userCurrency] || 1;
+                
+                // Convert Dest to USD, then USD to User
+                const amountInUSD = parseFloat(this.budget) / destRate;
+                const converted = amountInUSD * userRate;
+                
+                return new Intl.NumberFormat('en-US', { style: 'currency', currency: this.userCurrency }).format(converted);
+            }
+        }));
+    });
+</script>
+@endpush
 @endsection
