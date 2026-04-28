@@ -88,21 +88,24 @@
         
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             @foreach($featuredDestinations as $dest)
-                <a href="{{ route('destinations.show', $dest) }}" class="group block relative h-96 bg-gray-200 overflow-hidden shadow-postcard transform transition hover:-translate-y-2 duration-300 border-8 border-white">
-                    <img src="{{ $dest->cover_image_url }}" alt="{{ $dest->name }}" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110">
+                <a href="{{ route('destinations.show', $dest) }}" class="polaroid group block"
+                   x-data="{ shown: false }" x-intersect.once="shown = true"
+                   :class="shown ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'"
+                   style="transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1); transition-delay: {{ $loop->index * 150 }}ms;">
+                   
+                    <div class="tape{{ $loop->iteration % 2 == 0 ? '-alt' : '' }}"></div>
                     
-                    <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
+                    <div class="h-72 overflow-hidden bg-gray-200 border-b border-journal-border relative border border-gray-100">
+                        <img src="{{ $dest->cover_image_url }}" alt="{{ $dest->name }}" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 filter sepia-[.2]">
+                    </div>
                     
-                    <!-- Decorative tape -->
-                    <div class="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-24 h-6 bg-white/40 backdrop-blur-sm rotate-[-2deg] shadow-sm"></div>
-                    
-                    <div class="absolute bottom-0 left-0 right-0 p-6">
-                        <div class="flex items-center gap-2 mb-2 text-journal-paper text-sm">
-                            <i class="fa-solid fa-map-pin text-journal-accent"></i>
-                            <span class="tracking-widest uppercase text-xs font-bold">{{ $dest->country }}</span>
+                    <div class="pt-5 px-3 text-center">
+                        <div class="flex items-center justify-center gap-2 mb-1 text-journal-accent text-xs">
+                            <i class="fa-solid fa-map-pin"></i>
+                            <span class="tracking-widest uppercase font-bold">{{ $dest->country }}</span>
                         </div>
-                        <h3 class="text-3xl font-serif font-bold text-white mb-2">{{ $dest->name }}</h3>
-                        <p class="text-gray-300 text-sm line-clamp-2">{{ $dest->short_description ?? $dest->description }}</p>
+                        <h3 class="text-3xl font-serif font-bold text-journal-dark mb-2">{{ $dest->name }}</h3>
+                        <p class="text-journal-light text-xs line-clamp-2 italic font-serif leading-relaxed">"{{ $dest->short_description ?? $dest->description }}"</p>
                     </div>
                 </a>
             @endforeach

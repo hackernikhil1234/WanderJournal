@@ -63,10 +63,9 @@
             @endif
 
             <!-- Weather Widget (Vue/Alpine via API) -->
-            <div x-data="weatherWidget('{{ $destination->latitude }}', '{{ $destination->longitude }}')" class="bg-gradient-to-br from-blue-50 to-blue-100 p-8 border border-blue-200 rounded-sm shadow-sm relative overflow-hidden">
-                <i class="fa-solid fa-cloud-sun text-9xl absolute -right-10 -top-10 text-blue-200 opacity-50"></i>
-                <h2 class="text-2xl font-serif font-bold text-blue-900 mb-6 relative z-10">5-Day Weather Forecast</h2>
-                
+            <div x-data="weatherWidget('{{ $destination->latitude }}', '{{ $destination->longitude }}')" class="bg-journal-paper p-8 border border-journal-border shadow-postcard relative stamp-border mt-8">
+                <div class="wax-seal" style="background:#4a5568; color:#e2e8f0; top:-15px; left:20px; right:auto; transform:rotate(-10deg);">M</div>
+                <h2 class="text-2xl font-serif font-bold text-journal-dark mb-6 relative z-10 border-b border-journal-border pb-2 uppercase tracking-widest text-sm">Meteorological Report</h2>
                 <template x-if="loading">
                     <div class="flex justify-center py-8">
                         <i class="fa-solid fa-circle-notch fa-spin text-3xl text-blue-500"></i>
@@ -80,13 +79,15 @@
                 </template>
                 
                 <template x-if="weather && !loading && !error">
-                    <div class="grid grid-cols-5 gap-4 relative z-10">
+                    <div class="grid grid-cols-2 md:grid-cols-5 gap-4 relative z-10">
                         <template x-for="day in weather.daily" :key="day.date">
-                            <div class="bg-white/80 backdrop-blur p-3 text-center border border-white shadow-sm rounded-sm">
-                                <div class="text-xs font-bold text-blue-900 uppercase tracking-wider mb-2" x-text="formatDate(day.date)"></div>
-                                <img :src="day.icon_url" :alt="day.description" class="w-12 h-12 mx-auto filter drop-shadow-sm">
-                                <div class="text-2xl font-bold text-blue-900" x-html="day.temp + '&deg;'"></div>
-                                <div class="text-xs text-blue-700 capitalize mt-1" x-text="day.condition"></div>
+                            <div class="bg-white p-3 text-center border border-journal-border shadow-sm rounded-sm relative polaroid-mini hover:scale-105 transition-transform">
+                                <div class="text-[10px] font-bold text-journal-dark uppercase tracking-widest border-b border-dashed border-journal-border pb-1 mb-2" x-text="formatDate(day.date)"></div>
+                                <div class="h-12 flex items-center justify-center my-2">
+                                    <i class="fa-regular text-4xl text-journal-olive opacity-80 mix-blend-multiply" :class="getWeatherIcon(day.condition)"></i>
+                                </div>
+                                <div class="text-2xl font-serif font-bold text-journal-dark" x-html="day.temp + '&deg;'"></div>
+                                <div class="text-[10px] text-journal-light uppercase tracking-wider mt-1 font-bold" x-text="day.condition"></div>
                             </div>
                         </template>
                     </div>
@@ -176,6 +177,16 @@
             formatDate(dateStr) {
                 const date = new Date(dateStr);
                 return date.toLocaleDateString('en-US', { weekday: 'short' });
+            },
+            
+            getWeatherIcon(condition) {
+                condition = condition.toLowerCase();
+                if(condition.includes('clear') || condition.includes('sun')) return 'fa-sun';
+                if(condition.includes('rain') || condition.includes('drizzle')) return 'fa-cloud-rain';
+                if(condition.includes('storm') || condition.includes('thunder')) return 'fa-cloud-bolt';
+                if(condition.includes('snow')) return 'fa-snowflake';
+                if(condition.includes('cloud')) return 'fa-cloud';
+                return 'fa-cloud-sun';
             }
         }))
     })

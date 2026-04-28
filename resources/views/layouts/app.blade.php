@@ -53,7 +53,21 @@
         
         @stack('styles')
     </head>
-    <body class="font-sans antialiased text-journal-dark paper-bg min-h-screen flex flex-col">
+    <body class="font-sans antialiased text-journal-dark paper-bg min-h-screen flex flex-col"
+          x-data="{ pageLoaded: false }" 
+          x-init="window.addEventListener('load', () => { setTimeout(() => pageLoaded = true, 500) })"
+          :class="pageLoaded ? '' : 'overflow-hidden'">
+          
+        <!-- Vintage Loading Screen -->
+        <div x-show="!pageLoaded" 
+             x-transition:leave="transition ease-in-out duration-1000"
+             x-transition:leave-start="opacity-100"
+             x-transition:leave-end="opacity-0"
+             class="fixed inset-0 z-[100] bg-journal-paper flex flex-col items-center justify-center">
+            <i class="fa-regular fa-compass text-6xl text-journal-gold compass-spin mb-4 drop-shadow-md"></i>
+            <h2 class="font-serif text-2xl text-journal-dark tracking-widest uppercase mt-4">WanderJournal</h2>
+            <p class="text-journal-light italic mt-2 font-script text-2xl">Preparing your journey...</p>
+        </div>
         
         <!-- Main Navigation -->
         <nav class="bg-journal-paper border-b border-journal-border shadow-sm relative z-50">

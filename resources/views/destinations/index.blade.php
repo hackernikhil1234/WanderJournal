@@ -45,24 +45,32 @@
     @else
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             @foreach($destinations as $dest)
-                <a href="{{ route('destinations.show', $dest) }}" class="group bg-white border border-journal-border shadow-postcard hover:shadow-lg transition-all duration-300 relative">
+                <a href="{{ route('destinations.show', $dest) }}" class="polaroid group block">
+                    <!-- Masking Tape -->
+                    <div class="tape{{ $loop->iteration % 2 == 0 ? '-alt' : '' }}"></div>
+                    
                     <!-- Photo -->
-                    <div class="h-48 overflow-hidden bg-gray-200 border-b border-journal-border relative">
-                        <img src="{{ $dest->cover_image_url }}" alt="{{ $dest->name }}" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105">
-                        <div class="absolute top-2 right-2 bg-white/90 backdrop-blur px-2 py-1 text-xs font-bold uppercase tracking-wider shadow-sm flex items-center gap-1">
+                    <div class="h-48 overflow-hidden bg-gray-200 border-b border-journal-border relative border border-gray-100">
+                        <img src="{{ $dest->cover_image_url }}" alt="{{ $dest->name }}" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 filter sepia-[.2]">
+                        <div class="absolute top-2 right-2 bg-white/90 backdrop-blur px-2 py-1 text-xs font-bold uppercase tracking-wider shadow-sm flex items-center gap-1 border border-journal-border">
                             <i class="fa-solid fa-star text-journal-gold"></i> {{ number_format($dest->average_rating, 1) }}
                         </div>
                     </div>
                     
                     <!-- Content -->
-                    <div class="p-5">
-                        <div class="text-xs uppercase tracking-widest text-journal-accent mb-1 font-bold">{{ $dest->country }}</div>
+                    <div class="pt-4 px-2 text-center">
+                        <div class="text-[10px] uppercase tracking-widest text-journal-accent mb-1 font-bold">{{ $dest->country }}</div>
                         <h3 class="text-xl font-serif font-bold text-journal-dark mb-2 group-hover:text-journal-olive transition-colors">{{ $dest->name }}</h3>
                         
-                        <div class="flex flex-wrap gap-2 mb-4">
-                            <span class="inline-block bg-journal-paper text-journal-dark text-xs px-2 py-1 border border-journal-border rounded-sm">
+                        <div class="flex justify-center flex-wrap gap-2 mb-2">
+                            <span class="inline-block bg-journal-paper text-journal-dark text-[10px] px-2 py-0.5 border border-journal-border rounded-sm uppercase tracking-wider font-bold">
                                 {{ ucfirst($dest->category) }}
                             </span>
+                        </div>
+                        
+                        <!-- Handwritten Caption Font Simulation -->
+                        <div class="absolute bottom-3 left-0 w-full text-center font-serif italic text-journal-light text-xs">
+                            Est. {{ $dest->created_at->format('Y') }}
                         </div>
                     </div>
                 </a>

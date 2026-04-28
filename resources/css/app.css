@@ -1,3 +1,51 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+    body {
+        cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="%235a5146" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l4 10-4 10-4-10z"/></svg>') 10 10, auto;
+    }
+    a, button, [role="button"], input, select, textarea {
+        cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="%23d65a31" stroke="%235a5146" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l4 10-4 10-4-10z"/></svg>') 12 12, pointer;
+    }
+}
+
+@layer components {
+    .polaroid {
+        @apply bg-white p-3 pb-12 shadow-postcard border border-journal-border relative transition-transform duration-300;
+    }
+    .polaroid:hover {
+        @apply z-10 scale-105 shadow-xl;
+    }
+    .tape {
+        @apply absolute -top-4 left-1/2 -translate-x-1/2 w-28 h-8 bg-white/70 backdrop-blur-md shadow-sm border border-white/30 z-20 mix-blend-overlay;
+        transform: translateX(-50%) rotate(-3deg);
+    }
+    .tape-alt {
+        @apply absolute -top-3 left-1/2 -translate-x-1/2 w-24 h-8 bg-white/70 backdrop-blur-md shadow-sm border border-white/30 z-20 mix-blend-overlay;
+        transform: translateX(-50%) rotate(2deg);
+    }
+    .wax-seal {
+        @apply transition-all duration-300 cursor-pointer;
+    }
+    .wax-seal:hover {
+        @apply scale-110 drop-shadow-md brightness-110;
+    }
+    .wax-seal:active {
+        @apply scale-95 drop-shadow-none brightness-90;
+    }
+    
+    /* Loading Spinner */
+    .compass-spin {
+        animation: compassSpin 3s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    }
+}
+
+@keyframes compassSpin {
+    0% { transform: rotate(0deg); }
+    25% { transform: rotate(180deg); }
+    50% { transform: rotate(180deg); }
+    75% { transform: rotate(360deg); }
+    100% { transform: rotate(360deg); }
+}
