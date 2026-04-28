@@ -27,7 +27,7 @@ class WeatherService
 
         return Cache::remember($cacheKey, now()->addHours(3), function () use ($lat, $lon) {
             try {
-                $response = Http::get("{$this->baseUrl}/forecast", [
+                $response = Http::timeout(3)->get("{$this->baseUrl}/forecast", [
                     'lat' => $lat,
                     'lon' => $lon,
                     'appid' => $this->apiKey,

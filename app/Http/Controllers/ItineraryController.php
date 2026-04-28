@@ -34,6 +34,9 @@ class ItineraryController extends Controller
         
         foreach ($validated['items'] as $itemData) {
             ItineraryItem::where('id', $itemData['id'])
+                ->whereHas('itineraryDay', function($query) use ($trip) {
+                    $query->where('trip_id', $trip->id);
+                })
                 ->update([
                     'itinerary_day_id' => $itemData['day_id'],
                     'sort_order' => $itemData['order']

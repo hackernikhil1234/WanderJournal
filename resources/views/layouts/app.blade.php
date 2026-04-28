@@ -6,6 +6,13 @@
         <meta name="csrf-token" content="{{ csrf_token() }}">
 
         <title>@yield('title', config('app.name', 'WanderJournal'))</title>
+        
+        <!-- SEO & Accessibility -->
+        <meta name="description" content="@yield('meta_description', 'Plan, organize, and cherish your travel memories with WanderJournal\'s smart vintage itinerary planner.')">
+        <meta property="og:title" content="@yield('title', config('app.name', 'WanderJournal'))">
+        <meta property="og:type" content="website">
+        <meta property="og:description" content="@yield('meta_description', 'Crafting unforgettable journeys, one page at a time.')">
+        <meta name="theme-color" content="#2C363F">
 
         <!-- Google Fonts -->
         <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -55,7 +62,13 @@
     </head>
     <body class="font-sans antialiased text-journal-dark paper-bg min-h-screen flex flex-col"
           x-data="{ pageLoaded: false }" 
-          x-init="window.addEventListener('load', () => { setTimeout(() => pageLoaded = true, 500) })"
+          x-init="
+              const minLoadTime = new Promise(resolve => setTimeout(resolve, 800));
+              const windowLoaded = new Promise(resolve => window.addEventListener('load', resolve));
+              Promise.all([minLoadTime, windowLoaded]).then(() => {
+                  pageLoaded = true;
+              });
+          "
           :class="pageLoaded ? '' : 'overflow-hidden'">
           
         <!-- Vintage Loading Screen -->
@@ -97,7 +110,7 @@
                             <div class="relative" x-data="{ open: false }" @click.outside="open = false" @close.stop="open = false">
                                 <div @click="open = ! open">
                                     <button class="flex items-center gap-2 text-sm font-medium text-journal-dark hover:text-journal-accent focus:outline-none transition duration-150 ease-in-out">
-                                        <img class="h-8 w-8 rounded-full border border-journal-border object-cover" src="{{ Auth::user()->avatar_url }}" alt="{{ Auth::user()->name }}" />
+                                        <img class="h-8 w-8 rounded-full border border-journal-border object-cover" src="{{ Auth::user()->avatar_url }}" alt="{{ Auth::user()->name }}'s profile picture" />
                                         <div>{{ Auth::user()->name }}</div>
                                         <i class="fa-solid fa-chevron-down text-xs ml-1"></i>
                                     </button>
