@@ -55,7 +55,18 @@
     .sortable-drag {
         cursor: grabbing !important;
     }
+    .leaflet-popup-content-wrapper {
+        background-color: #FDFBF7;
+        border: 1px solid #E8E1D5;
+        border-radius: 2px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    .leaflet-popup-tip {
+        background-color: #FDFBF7;
+        border: 1px solid #E8E1D5;
+    }
 </style>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
 @endpush
 
 @section('content')
@@ -107,28 +118,10 @@
         </div>
     </div>
 
-    <!-- Overview Map (Google Maps Embed) -->
+    <!-- Overview Map (Leaflet) -->
     <div x-show="activeDay === 'all'" x-transition class="bg-white p-2 border border-journal-border shadow-postcard mb-12 relative stamp-border">
         <div class="absolute -top-3 -right-3 z-10 text-journal-dark transform rotate-[20deg] text-3xl opacity-80"><i class="fa-solid fa-paperclip"></i></div>
-        <div class="aspect-w-16 aspect-h-7 bg-gray-200 w-full relative">
-            <iframe
-              width="100%"
-              height="450"
-              style="border:0;"
-              loading="lazy"
-              allowfullscreen
-              referrerpolicy="no-referrer-when-downgrade"
-              src="https://www.google.com/maps/embed/v1/place?key={{ config('services.google.maps_api_key', 'YOUR_API_KEY') }}&q={{ urlencode($trip->destination->name . ', ' . $trip->destination->country) }}">
-            </iframe>
-            
-            @if(config('services.google.maps_api_key') === 'YOUR_GOOGLE_MAPS_API_KEY' || !config('services.google.maps_api_key'))
-            <div class="absolute inset-0 bg-gray-800/80 flex items-center justify-center text-white flex-col p-6 text-center">
-                <i class="fa-solid fa-map text-4xl mb-4 text-journal-gold"></i>
-                <h3 class="text-xl font-bold mb-2">Map Integration Required</h3>
-                <p class="text-sm">Please add your Google Maps API Key to the .env file to see the interactive map.</p>
-            </div>
-            @endif
-        </div>
+        <div id="itinerary-map" class="w-full h-[450px] bg-journal-paper relative z-0 filter sepia-[.3] contrast-125"></div>
     </div>
 
     <!-- Timeline Content -->
@@ -342,6 +335,44 @@
                         }
                     });
                 });
+                
+                // Initialize Leaflet Map
+                this.initMap();
+            },
+            
+            initMap() {
+                // Wait for Alpine to render before initializing map to avoid size issues
+                setTimeout(() => {
+                    const map = L.map('itinerary-map').setView([{{ $trip->destination->latitude }}, {{ $trip->destination->longitude }}], 12);
+                    
+                    // CartoDB Voyager tiles (clean, light, works well with our sepia filter)
+                    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+                        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+                        subdomains: 'abcd',
+                        maxZoom: 20
+                    }).addTo(map);
+                    
+                    // Custom vintage pin icon
+                    const pinIcon = L.divIcon({
+                        html: '<i class="fa-solid fa-map-pin text-4xl text-journal-accent drop-shadow-md" style="transform: rotate(-15deg);"></i>',
+                        className: 'custom-div-icon bg-transparent border-0',
+                        iconSize: [30, 42],
+                        iconAnchor: [15, 42],
+                        popupAnchor: [0, -35]
+                    });
+                    
+                    L.marker([{{ $trip->destination->latitude }}, {{ $trip->destination->longitude }}], {icon: pinIcon})
+                     .addTo(map)
+                     .bindPopup('<div class="font-serif font-bold text-lg text-journal-dark px-2 text-center">{{ $trip->destination->name }}</div>')
+                     .openPopup();
+                     
+                    // Fix map rendering issues when unhidden by Alpine tabs
+                    this.$watch('activeDay', value => {
+                        if(value === 'all') {
+                            setTimeout(() => map.invalidateSize(), 100);
+                        }
+                    });
+                }, 100);
             },
             
             saveOrder() {
@@ -381,5 +412,6 @@
         }));
     });
 </script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 @endpush
 @endsection
