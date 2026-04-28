@@ -80,6 +80,9 @@
                         </a>
                         
                         <div class="hidden sm:flex sm:ml-10 space-x-8">
+                            <button onclick="window.history.back()" class="inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-journal-light hover:text-journal-dark hover:border-journal-border text-sm font-medium transition duration-150 gap-2 cursor-pointer">
+                                <i class="fa-solid fa-arrow-left text-xs"></i> Go Back
+                            </button>
                             <a href="{{ route('destinations.index') }}" class="inline-flex items-center px-1 pt-1 border-b-2 {{ request()->routeIs('destinations.*') ? 'border-journal-accent text-journal-dark' : 'border-transparent text-journal-light hover:text-journal-dark hover:border-journal-border' }} text-sm font-medium transition duration-150">
                                 Destinations
                             </a>
