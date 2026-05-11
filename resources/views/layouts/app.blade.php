@@ -102,6 +102,9 @@
                             <a href="{{ route('trips.create') }}" class="inline-flex items-center px-1 pt-1 border-b-2 {{ request()->routeIs('trips.create') ? 'border-journal-accent text-journal-dark' : 'border-transparent text-journal-light hover:text-journal-dark hover:border-journal-border' }} text-sm font-medium transition duration-150">
                                 Plan a Trip
                             </a>
+                            <a href="{{ route('community.feed') }}" class="inline-flex items-center px-1 pt-1 border-b-2 {{ request()->routeIs('community.*') ? 'border-journal-accent text-journal-dark' : 'border-transparent text-journal-light hover:text-journal-dark hover:border-journal-border' }} text-sm font-medium transition duration-150">
+                                <i class="fa-solid fa-earth-americas mr-1.5 text-xs"></i> Explore
+                            </a>
                         </div>
                     </div>
                     
@@ -216,6 +219,10 @@
                 </div>
             </div>
         </footer>
+
+        @auth
+        @include('components.chatbot')
+        @endauth
 
         @stack('scripts')
     </body>

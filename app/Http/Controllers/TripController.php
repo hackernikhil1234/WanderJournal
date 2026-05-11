@@ -5,6 +5,10 @@ namespace App\Http\Controllers;
 use App\Models\Destination;
 use App\Models\Trip;
 use App\Services\ItineraryGeneratorService;
+use App\Services\GeminiAIService;
+use App\Jobs\GenerateAiItineraryJob;
+use App\Http\Requests\StoreTripRequest;
+use App\Http\Requests\UpdateTripRequest;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -23,91 +27,108 @@ class TripController extends Controller
         if ($request->has('destination')) {
             $destination = Destination::where('slug', $request->destination)->first();
         }
-        
+
         $destinations = Destination::orderBy('name')->get();
-        
-        return view('trips.create', compact('destinations', 'destination'));
+        $aiAvailable  = app(GeminiAIService::class)->isConfigured();
+
+        return view('trips.create', compact('destinations', 'destination', 'aiAvailable'));
     }
 
-    public function store(Request $request, ItineraryGeneratorService $generator)
+    public function store(StoreTripRequest $request, ItineraryGeneratorService $generator)
     {
-        $validated = $request->validate([
-            'destination_id' => 'required|exists:destinations,id',
-            'title' => 'required|string|max:255',
-            'dates' => 'required|string', // Format: "YYYY-MM-DD to YYYY-MM-DD"
-            'budget' => 'nullable|numeric|min:0',
-            'travel_style' => 'required|in:luxury,budget,adventure,cultural,backpacker,family',
-            'num_travelers' => 'required|integer|min:1|max:20',
-            'interests' => 'nullable|array',
-        ]);
-        
+        $validated = $request->validated();
+
         // Parse dates
-        $dates = explode(' to ', $validated['dates']);
+        $dates     = explode(' to ', $validated['dates']);
         $startDate = Carbon::parse($dates[0]);
-        $endDate = count($dates) > 1 ? Carbon::parse($dates[1]) : clone $startDate;
-        $numDays = $startDate->diffInDays($endDate) + 1;
-        
+        $endDate   = count($dates) > 1 ? Carbon::parse($dates[1]) : $startDate->copy();
+        $numDays   = $startDate->diffInDays($endDate) + 1;
+
         $trip = Trip::create([
-            'user_id' => Auth::id(),
-            'destination_id' => $validated['destination_id'],
-            'title' => $validated['title'],
-            'start_date' => $startDate,
-            'end_date' => $endDate,
-            'num_days' => $numDays,
-            'budget' => $validated['budget'] ?? null,
-            'travel_style' => $validated['travel_style'],
-            'num_travelers' => $validated['num_travelers'],
-            'interests' => isset($validated['interests']) ? implode(',', $validated['interests']) : null,
-            'status' => 'planning',
+            'user_id'                   => Auth::id(),
+            'destination_id'            => $validated['destination_id'],
+            'title'                     => $validated['title'],
+            'start_date'                => $startDate,
+            'end_date'                  => $endDate,
+            'num_days'                  => $numDays,
+            'budget'                    => $validated['budget'] ?? null,
+            'currency'                  => $validated['currency'] ?? 'USD',
+            'travel_style'              => $validated['travel_style'],
+            'num_travelers'             => $validated['num_travelers'],
+            'interests'                 => isset($validated['interests']) ? implode(',', $validated['interests']) : null,
+            'food_preferences'          => $validated['food_preferences'] ?? null,
+            'accommodation_type'        => $validated['accommodation_type'] ?? null,
+            'transportation_preference' => $validated['transportation_preference'] ?? null,
+            'budget_mode'               => $validated['budget_mode'] ?? 'standard',
+            'notes'                     => $validated['notes'] ?? null,
+            'status'                    => 'planning',
         ]);
-        
-        // Generate Smart Itinerary
-        $generator->generateForTrip($trip);
-        
-        return redirect()->route('trips.itinerary.show', $trip)
-            ->with('success', 'Trip created successfully! Here is your smart itinerary.');
+
+        // Mark as generating
+        $trip->ai_metadata = ['is_generating' => true];
+        $trip->save();
+
+        // Dispatch background job for itinerary generation
+        GenerateAiItineraryJob::dispatch($trip);
+
+        $successMsg = '🗺️ Your trip has been created! The AI is currently crafting your personalized itinerary. It will appear here shortly.';
+
+        return redirect()->route('trips.itinerary.show', $trip)->with('success', $successMsg);
     }
 
     public function show(Trip $trip)
     {
-        if ($trip->user_id !== Auth::id() && !$trip->is_public) {
-            abort(403);
-        }
-        
-        $trip->load(['destination', 'itineraryDays.items', 'bookings']);
+        $this->authorize('view', $trip);
+
+        $trip->load(['destination', 'itineraryDays.items', 'bookings', 'expenses']);
         return view('trips.show', compact('trip'));
     }
 
     public function edit(Trip $trip)
     {
-        if ($trip->user_id !== Auth::id()) abort(403);
+        $this->authorize('update', $trip);
         $destinations = Destination::orderBy('name')->get();
-        return view('trips.edit', compact('trip', 'destinations'));
+        $aiAvailable  = app(GeminiAIService::class)->isConfigured();
+        return view('trips.edit', compact('trip', 'destinations', 'aiAvailable'));
     }
 
-    public function update(Request $request, Trip $trip)
+    public function update(UpdateTripRequest $request, Trip $trip)
     {
-        if ($trip->user_id !== Auth::id()) abort(403);
-        
-        $validated = $request->validate([
-            'title' => 'required|string|max:255',
-            'budget' => 'nullable|numeric|min:0',
-            'travel_style' => 'required|in:luxury,budget,adventure,cultural,backpacker,family',
-            'num_travelers' => 'required|integer|min:1',
-            'status' => 'required|in:planning,confirmed,completed,cancelled',
-            'notes' => 'nullable|string',
-            'is_public' => 'boolean',
-        ]);
-        
+        $this->authorize('update', $trip);
+
+        $validated = $request->validated();
+
         $trip->update($validated);
-        
+
         return redirect()->route('trips.show', $trip)->with('success', 'Trip updated successfully!');
     }
 
     public function destroy(Trip $trip)
     {
-        if ($trip->user_id !== Auth::id()) abort(403);
+        $this->authorize('delete', $trip);
         $trip->delete();
         return redirect()->route('dashboard')->with('success', 'Trip deleted.');
+    }
+
+    /**
+     * Clone an existing trip with new dates.
+     */
+    public function clone(Trip $trip, ItineraryGeneratorService $generator)
+    {
+        $this->authorize('view', $trip);
+
+        $newTrip = $trip->replicate(['ai_generated', 'ai_summary', 'ai_metadata', 'estimated_cost']);
+        $newTrip->title     = 'Copy of ' . $trip->title;
+        $newTrip->status    = 'planning';
+        $newTrip->user_id   = Auth::id();
+        $newTrip->is_public = false;
+        $newTrip->save();
+
+        $newTrip->ai_metadata = ['is_generating' => true];
+        $newTrip->save();
+
+        GenerateAiItineraryJob::dispatch($newTrip);
+
+        return redirect()->route('trips.show', $newTrip)->with('success', 'Trip cloned! The AI is regenerating your itinerary for the new dates.');
     }
 }

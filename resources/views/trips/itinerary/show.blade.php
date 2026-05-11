@@ -102,10 +102,24 @@
     </div>
 </div>
 
-<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8" x-data="itineraryManager()">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8" x-data="itineraryManager()" x-init="initData({{ json_encode($trip->ai_metadata['is_generating'] ?? false) }})">
     
-    <!-- Day Navigation -->
-    <div class="mb-10 overflow-x-auto pb-4">
+    <!-- Loading State for Background Generation -->
+    <div x-show="isGenerating" class="bg-white p-12 text-center shadow-postcard border border-journal-border rounded-sm stamp-border mb-12">
+        <i class="fa-solid fa-compass fa-spin text-5xl text-journal-accent mb-6 inline-block"></i>
+        <h2 class="text-3xl font-serif font-bold text-journal-dark mb-4">Crafting Your Journey...</h2>
+        <p class="text-journal-light max-w-lg mx-auto mb-6">Our AI is analyzing your preferences, researching the best spots in {{ $trip->destination->name }}, and piecing together the perfect itinerary. This usually takes 10-20 seconds.</p>
+        <div class="w-full bg-gray-200 rounded-full h-2.5 max-w-md mx-auto mb-2 overflow-hidden">
+            <div class="bg-journal-accent h-2.5 rounded-full" :style="'width: ' + progress + '%'"></div>
+        </div>
+        <p class="text-xs font-bold text-journal-dark uppercase tracking-wider" x-text="progressText">Analyzing Destination</p>
+    </div>
+
+    <!-- Main Content (Hidden while generating) -->
+    <div x-show="!isGenerating" style="display: none;" x-cloak>
+        <!-- Day Navigation -->
+        <div class="mb-10 overflow-x-auto pb-4">
+
         <div class="flex gap-2 min-w-max">
             <button @click="activeDay = 'all'" :class="{'bg-journal-dark text-white border-journal-dark': activeDay === 'all', 'bg-white text-journal-dark border-journal-border hover:bg-journal-paper': activeDay !== 'all'}" class="px-6 py-3 border font-serif font-bold transition shadow-sm whitespace-nowrap">
                 Overview
@@ -307,6 +321,57 @@
             activeDay: 'all',
             isModalOpen: false,
             selectedDayId: null,
+            isGenerating: false,
+            progress: 0,
+            progressText: 'Initializing...',
+            pollInterval: null,
+            
+            initData(isGeneratingFlag) {
+                this.isGenerating = isGeneratingFlag;
+                if (this.isGenerating) {
+                    this.startPolling();
+                } else {
+                    this.initFeatures();
+                }
+            },
+            
+            startPolling() {
+                // Fake progress bar
+                let steps = ['Analyzing Destination', 'Finding Hotspots', 'Optimizing Routes', 'Adding Travel Tips', 'Finalizing...'];
+                let stepIdx = 0;
+                
+                const progInt = setInterval(() => {
+                    if (this.progress < 90) {
+                        this.progress += Math.floor(Math.random() * 10) + 1;
+                        if (this.progress % 20 === 0 && stepIdx < steps.length - 1) stepIdx++;
+                        this.progressText = steps[stepIdx];
+                    }
+                }, 1000);
+
+                // Polling the server
+                this.pollInterval = setInterval(async () => {
+                    try {
+                        const res = await fetch(`{{ route('trips.ai.status', $trip) }}`);
+                        const data = await res.json();
+                        
+                        if (data.is_ready) {
+                            clearInterval(this.pollInterval);
+                            clearInterval(progInt);
+                            this.progress = 100;
+                            this.progressText = 'Done!';
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 500);
+                        } else if (data.has_failed) {
+                            clearInterval(this.pollInterval);
+                            clearInterval(progInt);
+                            this.progressText = 'Generation Failed. Please try again.';
+                        }
+                    } catch (e) {
+                        console.error('Polling error', e);
+                    }
+                }, 3000);
+            },
             
             openAddItemModal(dayId) {
                 this.selectedDayId = dayId;
@@ -316,10 +381,9 @@
             
             closeModal() {
                 this.isModalOpen = false;
-                // document.body.style.overflow = '';
             },
             
-            init() {
+            initFeatures() {
                 // Initialize Sortable.js for drag and drop reordering
                 const lists = document.querySelectorAll('.sortable-list');
                 
