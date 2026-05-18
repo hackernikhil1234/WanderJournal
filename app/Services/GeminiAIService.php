@@ -74,7 +74,7 @@ Return ONLY valid JSON with this exact structure (no markdown, no explanation):
   ]
 }
 
-Include these categories: Documents, Clothing, Electronics, Toiletries, Health & Medical, Essentials.
+Include these categories: Documents, Clothing, Electronics, Toiletries, Health, Essentials, Entertainment.
 Add destination-specific items (beach/mountain/city-specific). Mark essential items.
 PROMPT;
 

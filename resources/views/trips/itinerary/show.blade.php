@@ -348,11 +348,18 @@
                     }
                 }, 1000);
 
+                let errorCount = 0;
+                
                 // Polling the server
                 this.pollInterval = setInterval(async () => {
                     try {
                         const res = await fetch(`{{ route('trips.ai.status', $trip) }}`);
+                        if (!res.ok) {
+                            throw new Error(`Server returned ${res.status}`);
+                        }
+                        
                         const data = await res.json();
+                        errorCount = 0; // reset on success
                         
                         if (data.is_ready) {
                             clearInterval(this.pollInterval);
@@ -369,6 +376,12 @@
                         }
                     } catch (e) {
                         console.error('Polling error', e);
+                        errorCount++;
+                        if (errorCount >= 3) {
+                            clearInterval(this.pollInterval);
+                            clearInterval(progInt);
+                            this.progressText = 'Connection Error. Please check your server or database.';
+                        }
                     }
                 }, 3000);
             },

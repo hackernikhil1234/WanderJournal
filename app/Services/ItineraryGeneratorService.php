@@ -254,12 +254,26 @@ class ItineraryGeneratorService
             $aiPacking = $this->ai->generatePackingList($trip);
             if ($aiPacking && !empty($aiPacking['categories'])) {
                 $sortOrder = 0;
+                $validCategories = ['clothing', 'essentials', 'electronics', 'toiletries', 'documents', 'health', 'entertainment', 'other'];
+                
                 foreach ($aiPacking['categories'] as $category) {
+                    $rawCat = strtolower($category['name'] ?? 'other');
+                    $mappedCat = 'other';
+                    foreach ($validCategories as $valid) {
+                        if (str_contains($rawCat, $valid)) {
+                            $mappedCat = $valid;
+                            break;
+                        }
+                    }
+                    
                     foreach ($category['items'] ?? [] as $item) {
+                        $quantity = intval($item['quantity'] ?? 1);
+                        if ($quantity <= 0) $quantity = 1;
+
                         $trip->packingItems()->create([
                             'name'       => $item['name'],
-                            'category'   => strtolower($category['name']),
-                            'quantity'   => $item['quantity'] ?? 1,
+                            'category'   => $mappedCat,
+                            'quantity'   => $quantity,
                             'sort_order' => $sortOrder++,
                         ]);
                     }
